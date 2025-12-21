@@ -1,0 +1,251 @@
+﻿# Cross-Tenant Synchronization Configuration
+# Template for Microsoft Entra ID Cross-Tenant Sync
+# Automates B2B user lifecycle management between tenants
+
+configuration:
+  name: "Cross-Tenant User Synchronization"
+  description: "Automated B2B user provisioning from source to target tenant"
+  version: "1.0"
+  last_updated: "2025-01-01"
+
+# Tenant Configuration
+tenants:
+  source:
+    tenant_id: "11111111-1111-1111-1111-111111111111"  # Replace with source tenant ID
+    display_name: "Source Organization (Home Tenant)"
+    domain: "source.onmicrosoft.com"
+    role: "Identity source - users originate here"
+  
+  target:
+    tenant_id: "22222222-2222-2222-2222-222222222222"  # Replace with target tenant ID
+    display_name: "Target Organization (Resource Tenant)"
+    domain: "target.onmicrosoft.com"
+    role: "Identity target - B2B guests created here"
+
+# Provisioning Configuration
+provisioning:
+  # Enable/disable sync
+  status: enabled  # Options: enabled, disabled
+  
+  # Sync interval (automatic)
+  sync_interval: "40 minutes"  # Azure default, not configurable
+  
+  # Scope Configuration
+  scope:
+    type: group  # Options: group, all_assigned_users
+    
+    # Groups to include in sync scope
+    source_groups:
+      - group_id: "External-Collab-Eligible"  # Replace with actual group ID
+        display_name: "External Collaboration Eligible Users"
+        description: "Users eligible for cross-tenant B2B provisioning"
+      
+      # Add additional groups as needed
+      # - group_id: "another-group-id"
+      #   display_name: "Another Group"
+    
+    # Optional: Filter expression for fine-grained control
+    scoping_filter:
+      enabled: false
+      # Example filter: Only sync users in specific department
+      # expression: "department eq 'Engineering'"
+
+# Attribute Mappings
+attribute_mappings:
+  # Required attributes
+  required:
+    - source_attribute: "userPrincipalName"
+      target_attribute: "userPrincipalName"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "mail"
+      target_attribute: "mail"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "displayName"
+      target_attribute: "displayName"
+      mapping_type: direct
+      apply_on: create_and_update
+  
+  # Optional attributes
+  optional:
+    - source_attribute: "givenName"
+      target_attribute: "givenName"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "surname"
+      target_attribute: "surname"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "department"
+      target_attribute: "department"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "jobTitle"
+      target_attribute: "jobTitle"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "companyName"
+      target_attribute: "companyName"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "employeeId"
+      target_attribute: "employeeId"
+      mapping_type: direct
+      apply_on: create_and_update
+    
+    - source_attribute: "manager"
+      target_attribute: "manager"
+      mapping_type: direct
+      apply_on: create_and_update
+  
+  # Custom/Expression-based mappings
+  custom:
+    # Example: Set a constant value for synced users
+    - target_attribute: "extensionAttribute1"
+      mapping_type: constant
+      constant_value: "CrossTenantSync"
+      apply_on: create_only
+    
+    # Example: Expression-based mapping
+    # - target_attribute: "displayName"
+    #   mapping_type: expression
+    #   expression: "Join(' ', [givenName], [surname], '(External)')"
+    #   apply_on: create_and_update
+
+# Lifecycle Management
+lifecycle:
+  # Auto-deprovision when user is disabled/deleted in source
+  auto_deprovision:
+    enabled: true
+    on_source_disable: true
+    on_source_delete: true
+    on_scope_removal: true  # When user removed from sync scope group
+  
+  # Soft delete behavior
+  soft_delete:
+    enabled: true
+    retention_days: 30  # Days before permanent deletion
+  
+  # Restore behavior
+  restore:
+    enabled: true
+    auto_restore_on_source_enable: true
+
+# Target Tenant Settings
+target_settings:
+  # User type in target tenant
+  user_type: "Guest"  # B2B guest user
+  
+  # Invitation settings
+  invitation:
+    send_invitation_email: false  # Silent provisioning
+    invitation_redirect_url: null
+  
+  # Default group membership in target (optional)
+  default_group_membership:
+    - group_id: "Synced-External-Users"  # Replace with target group ID
+      display_name: "Synced External Users"
+
+# Accidental Deletion Prevention
+accidental_deletion_prevention:
+  enabled: true
+  threshold: 500  # Alert if more than 500 users would be deleted
+  notification_emails:
+    - "identity-team@company.com"
+    - "security-alerts@company.com"
+
+# Notifications
+notifications:
+  # Quarantine notifications
+  quarantine:
+    enabled: true
+    recipients:
+      - "identity-team@company.com"
+  
+  # Sync failure notifications
+  sync_failures:
+    enabled: true
+    recipients:
+      - "identity-team@company.com"
+
+# Monitoring and Reporting
+monitoring:
+  # Provisioning logs retention
+  log_retention_days: 30
+  
+  # Key metrics to monitor
+  metrics:
+    - successful_provisions
+    - failed_provisions
+    - skipped_provisions
+    - deprovision_count
+  
+  # Alert thresholds
+  alerts:
+    - metric: failed_provisions
+      threshold: 10
+      time_window: "1 hour"
+      severity: high
+
+# Metadata
+metadata:
+  owner: "Identity Team"
+  contact: "identity-team@company.com"
+  created_date: "2025-01-01"
+  review_date: "2025-04-01"
+  review_frequency: quarterly
+  
+  compliance_requirements:
+    - "User lifecycle automation"
+    - "SOX access reviews"
+    - "GDPR data minimization"
+  
+  dependencies:
+    - "Cross-Tenant Access must be configured first"
+    - "Source groups must exist"
+    - "Target groups must exist"
+  
+  change_history:
+    - date: "2025-01-01"
+      change: "Initial configuration"
+      changed_by: "Admin"
+      approved_by: "Security Team"
+
+# Validation Checklist
+validation:
+  pre_deployment:
+    - "Verify source tenant ID is correct"
+    - "Verify target tenant ID is correct"
+    - "Confirm source groups exist and have members"
+    - "Confirm Cross-Tenant Access is configured"
+    - "Test with pilot group first"
+  
+  post_deployment:
+    - "Verify users appear in target tenant"
+    - "Confirm attribute values are correct"
+    - "Test deprovision by removing user from scope"
+    - "Verify restore by re-adding user to scope"
+    - "Check provisioning logs for errors"
+
+# Rollback Plan
+rollback:
+  steps:
+    - "Disable provisioning status"
+    - "Document current state"
+    - "Notify stakeholders"
+    - "Review provisioning logs for issues"
+    - "Re-enable after issue resolution"
+  
+  emergency_contacts:
+    - name: "Identity Team Lead"
+      email: "identity-lead@company.com"
+    - name: "Security Team"
+      email: "security@company.com"

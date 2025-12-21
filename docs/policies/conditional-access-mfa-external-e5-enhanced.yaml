@@ -1,0 +1,206 @@
+# Conditional Access Policy: E5-Enhanced External User Security
+# Leverages Microsoft 365 E5 features (Identity Protection, Intune, Advanced CA)
+# Template for Microsoft Entra ID Conditional Access
+
+name: CA-External-Users-E5-Enhanced
+display_name: "E5-Enhanced MFA & Risk Protection for External Users"
+description: |
+  Advanced Conditional Access policy leveraging E5 features:
+  - Risk-based access (Identity Protection)
+  - Device compliance requirements (Intune)
+  - Adaptive session controls
+  - Real-time threat detection
+
+state: enabled  # Options: enabled, disabled, enabledForReportingButNotEnforced
+
+# Policy Assignments
+assignments:
+  users:
+    include:
+      - GuestsOrExternalUsers  # All guest and external users
+    exclude:
+      - emergency_access_accounts  # Break-glass accounts (define GUIDs)
+  
+  cloud_apps:
+    include:
+      - 00000003-0000-0ff1-ce00-000000000000  # SharePoint Online
+      - cc15fd57-2c6c-4117-a88c-83b1d56b4bbe  # Microsoft Teams
+      - 00000002-0000-0ff1-ce00-000000000000  # Exchange Online (E5 feature)
+    exclude: []
+  
+  conditions:
+    client_app_types:
+      - browser
+      - mobileAppsAndDesktopClients
+    
+    locations:
+      include:
+        - AllLocations
+      exclude:
+        - AllTrusted
+        - named_location_corporate_network  # Define trusted corporate networks
+    
+    device_platforms:
+      include:
+        - all
+      exclude: []
+    
+    # E5 FEATURE: Risk-based conditions
+    sign_in_risk_levels:
+      - high
+      - medium
+      # Low-risk sign-ins proceed with standard MFA
+    
+    user_risk_levels:
+      - high
+      # Medium/low user risk proceeds with MFA + monitoring
+    
+    # E5 FEATURE: Device state conditions
+    device_state:
+      include_devices:
+        - all
+      exclude_devices:
+        - compliant
+        - domainJoined  # Hybrid Azure AD joined devices
+
+# Access Controls
+grant_controls:
+  operator: AND  # E5: Require ALL conditions (more restrictive)
+  built_in_controls:
+    - mfa  # Require multi-factor authentication
+    - compliantDevice  # E5: Require Intune-compliant device
+    - domainJoinedDevice  # E5: OR require hybrid Azure AD join
+  
+  # E5 FEATURE: Terms of Use
+  terms_of_use:
+    - external_collaboration_terms_guid  # Replace with your ToU GUID
+  
+  custom_authentication_factors: []
+  
+  # E5 FEATURE: Authentication strength
+  authentication_strength:
+    strength_id: "00000000-0000-0000-0000-000000000002"  # Phishing-resistant MFA
+
+# Session Controls (E5 Enhanced)
+session_controls:
+  # Stricter sign-in frequency for external users
+  sign_in_frequency:
+    value: 4
+    type: hours  # More frequent than standard (E5 allows granular control)
+    is_enabled: true
+    authentication_type: primaryAndSecondaryAuthentication
+  
+  persistent_browser:
+    mode: never
+    is_enabled: true
+  
+  # E5 FEATURE: Microsoft Defender for Cloud Apps integration
+  cloud_app_security:
+    is_enabled: true
+    cloud_app_security_type: monitorOnly  # Options: monitorOnly, blockDownloads
+  
+  # E5 FEATURE: Continuous Access Evaluation
+  continuous_access_evaluation:
+    mode: strictEnforcement  # Real-time revocation
+  
+  # E5 FEATURE: Application enforced restrictions
+  application_enforced_restrictions:
+    is_enabled: true  # Limits SharePoint/Exchange access
+  
+  # E5 FEATURE: Disable resilience defaults
+  disable_resilience_defaults: false  # Keep resilience for user experience
+
+# E5-Specific Advanced Settings
+advanced_settings:
+  # Require re-authentication for sensitive operations
+  require_reauth_for:
+    - SharePoint file downloads (>100MB)
+    - Teams meeting recordings access
+    - Exchange sensitive email folders
+  
+  # Adaptive access based on real-time signals
+  adaptive_access:
+    enabled: true
+    signals:
+      - anomalous_location
+      - impossible_travel
+      - anonymous_ip
+      - malware_infected_ip
+      - unfamiliar_sign_in_properties
+
+# Metadata
+metadata:
+  created_by: "Identity Team"
+  created_date: "2025-01-01"
+  last_modified: "2025-01-01"
+  version: "2.0-E5"
+  review_frequency: monthly  # More frequent for high-security E5 policies
+  
+  e5_features_used:
+    - Identity Protection (P2)
+    - Intune Device Compliance
+    - Defender for Cloud Apps
+    - Continuous Access Evaluation
+    - Authentication Strength
+    - Terms of Use
+  
+  compliance_frameworks:
+    - SOX
+    - GDPR
+    - HIPAA
+    - Zero Trust
+    - NIST 800-53
+  
+  tags:
+    - external-users
+    - e5-enhanced
+    - risk-based
+    - device-compliance
+    - zero-trust
+
+# Notes
+notes: |
+  E5-Enhanced Features:
+  - Risk-based access control using Identity Protection
+  - Device compliance enforcement via Intune
+  - Real-time session monitoring with Defender for Cloud Apps
+  - Phishing-resistant MFA requirements
+  - Continuous Access Evaluation for instant revocation
+  
+  Configuration Requirements:
+  - Intune must be configured for device compliance policies
+  - Identity Protection must be enabled
+  - Defender for Cloud Apps connector configured
+  - Terms of Use created in Entra admin center
+  - Named locations defined for corporate networks
+  
+  Rollback Plan:
+  - Disable risk-based conditions first (high/medium to none)
+  - Remove device compliance requirements
+  - Revert to standard MFA-only policy
+  - Monitor CA insights for user impact
+  
+  Monitoring:
+  - Review CA sign-in logs daily for blocks
+  - Monitor Identity Protection risk detections
+  - Check Defender for Cloud Apps anomaly alerts
+  - Quarterly access review for external users
+
+# Validation Checklist
+validation:
+  pre_deployment:
+    - Intune device compliance policies active
+    - Identity Protection risk policies enabled
+    - Defender for Cloud Apps connected
+    - Terms of Use published
+    - Named locations configured
+    - Emergency access accounts excluded
+    - Pilot group tested (non-production external users)
+  
+  post_deployment:
+    - External user sign-ins successful (low-risk)
+    - High-risk sign-ins blocked as expected
+    - Non-compliant devices blocked
+    - Session controls applied (4-hour frequency)
+    - CA insights show policy effectiveness
+    - No false positives for legitimate users

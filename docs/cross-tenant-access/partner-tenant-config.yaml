@@ -1,0 +1,157 @@
+﻿# Cross-Tenant Access Configuration
+# Template for Microsoft Entra ID Cross-Tenant Access Settings
+# Replace placeholder GUIDs with actual tenant and group IDs
+
+configuration:
+  name: "Partner Organization - Cross-Tenant Access"
+  description: "Cross-tenant access configuration for trusted partner organization"
+  version: "1.0"
+  last_updated: "2025-01-01"
+
+# Partner Tenant Information
+partner_tenant:
+  tenant_id: "00000000-0000-0000-0000-000000000000"  # Replace with partner tenant ID
+  display_name: "Partner Organization"
+  domain: "partner.onmicrosoft.com"  # Replace with partner domain
+
+# Inbound Access Settings (Partner → Our Tenant)
+inbound_access:
+  # B2B Collaboration Settings
+  b2b_collaboration:
+    applications:
+      access_type: allowed  # Options: allowed, blocked
+      targets:
+        # Specific applications partner users can access
+        - application_id: "00000003-0000-0ff1-ce00-000000000000"  # SharePoint Online
+          display_name: "SharePoint Online"
+        - application_id: "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe"  # Microsoft Teams
+          display_name: "Microsoft Teams"
+        # Add more applications as needed
+    
+    users_and_groups:
+      access_type: allowed
+      targets:
+        # Specific groups from partner tenant allowed to access
+        - target_type: group
+          target_id: "External-Collab-Group"  # Replace with actual group ID
+          display_name: "External Collaboration Group"
+  
+  # B2B Direct Connect Settings (for Teams Shared Channels)
+  b2b_direct_connect:
+    applications:
+      access_type: allowed
+      targets:
+        - application_id: "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe"  # Microsoft Teams
+          display_name: "Microsoft Teams"
+    
+    users_and_groups:
+      access_type: allowed
+      targets:
+        - target_type: group
+          target_id: "Direct-Connect-Users"  # Replace with actual group ID
+
+# Outbound Access Settings (Our Tenant → Partner)
+outbound_access:
+  # B2B Collaboration Settings
+  b2b_collaboration:
+    applications:
+      access_type: allowed
+      targets:
+        - application_id: "00000003-0000-0ff1-ce00-000000000000"  # SharePoint Online
+        - application_id: "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe"  # Microsoft Teams
+    
+    users_and_groups:
+      access_type: allowed
+      targets:
+        - target_type: group
+          target_id: "Our-Employees"  # Replace with actual group ID
+          display_name: "Employees Allowed External Collaboration"
+  
+  # B2B Direct Connect Settings
+  b2b_direct_connect:
+    applications:
+      access_type: allowed
+      targets:
+        - application_id: "cc15fd57-2c6c-4117-a88c-83b1d56b4bbe"  # Microsoft Teams
+    
+    users_and_groups:
+      access_type: allowed
+      targets:
+        - target_type: group
+          target_id: "Direct-Connect-Allowed"  # Replace with actual group ID
+
+# Trust Settings
+trust_settings:
+  # Inbound Trust (accept claims from partner tenant)
+  inbound_trust:
+    # Accept MFA claims from partner tenant
+    is_mfa_accepted: true
+    
+    # Accept compliant device claims from partner tenant
+    is_compliant_device_accepted: true
+    
+    # Accept hybrid Azure AD joined device claims
+    is_hybrid_azure_ad_joined_device_accepted: true
+  
+  # Outbound Trust (pass our claims to partner tenant)
+  outbound_trust:
+    # Pass our MFA claims to partner tenant
+    pass_mfa_claims: true
+    
+    # Pass our device compliance claims
+    pass_device_compliance_claims: true
+    
+    # Pass hybrid join claims
+    pass_hybrid_join_claims: true
+
+# Automatic User Consent Settings
+automatic_user_consent:
+  # Inbound: Auto-consent for partner users accessing our apps
+  inbound_allowed: false  # Require explicit consent
+  
+  # Outbound: Auto-consent for our users accessing partner apps
+  outbound_allowed: false  # Require explicit consent
+
+# Tenant Restrictions (Optional)
+tenant_restrictions:
+  enabled: false
+  # Define if you want to restrict which tenants your users can access
+  # when using your corporate network/devices
+
+# Metadata
+metadata:
+  owner: "Identity Team"
+  contact: "identity-team@company.com"
+  created_date: "2025-01-01"
+  review_date: "2025-04-01"
+  review_frequency: quarterly
+  
+  compliance_requirements:
+    - "Zero Trust Architecture"
+    - "SOX Compliance"
+    - "Data Residency Requirements"
+  
+  change_history:
+    - date: "2025-01-01"
+      change: "Initial configuration"
+      changed_by: "Admin"
+      approved_by: "Security Team"
+
+# Notes and Considerations
+notes: |
+  Configuration Guidelines:
+  - Replace all placeholder GUIDs with actual tenant/group IDs
+  - Review trust settings quarterly
+  - Document any exceptions in change history
+  - Test inbound/outbound access after configuration
+  
+  Security Considerations:
+  - Only accept MFA claims from tenants with verified MFA policies
+  - Limit application access to business-required apps only
+  - Use specific groups rather than "All users" for access control
+  - Monitor cross-tenant sign-in logs for anomalies
+  
+  Rollback Plan:
+  - Disable trust settings first
+  - Then restrict inbound/outbound access
+  - Document rollback in change history

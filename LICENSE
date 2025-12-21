@@ -1,0 +1,54 @@
+MIT License
+
+Copyright (c) 2025 Hassan Rahman (Heyson315)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+IMPORTANT NOTES:
+
+1. Microsoft Product Licensing:
+   This license applies ONLY to the documentation, templates, and scripts in
+   this repository. It does NOT grant any rights to Microsoft products or
+   services, including but not limited to:
+   - Microsoft 365 E5
+   - Microsoft Entra ID (Azure Active Directory)
+   - Microsoft Intune
+   - Microsoft Defender for Cloud Apps
+   
+   You must have appropriate Microsoft licenses to use the features described
+   in these templates.
+
+2. Configuration Templates:
+   The YAML templates and scripts in this repository are provided as-is,
+   without warranty. You are responsible for:
+   - Testing in non-production environments first
+   - Validating compliance with your organization's policies
+   - Ensuring proper security configurations
+   - Maintaining backups and rollback procedures
+
+3. Compliance Frameworks:
+   References to SOX, GDPR, HIPAA, NIST 800-53, and other compliance frameworks
+   are for informational purposes. This repository does not guarantee compliance
+   with any specific regulation. Consult with your legal/compliance team.
+
+4. Third-Party Services:
+   Integration examples with third-party services (e.g., QuickBooks) are
+   subject to those services' terms and conditions.

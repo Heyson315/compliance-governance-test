@@ -1,0 +1,97 @@
+﻿# Conditional Access Policy: Require MFA for External Users
+# Template for Microsoft Entra ID Conditional Access
+# Replace placeholder values with your tenant-specific configuration
+
+name: CA-External-Users-Require-MFA
+display_name: "Require MFA for External Users"
+description: |
+  Enforces multi-factor authentication for all guest and external users
+  accessing Microsoft Teams and SharePoint Online resources.
+
+state: enabled  # Options: enabled, disabled, enabledForReportingButNotEnforced
+
+# Policy Assignments
+assignments:
+  users:
+    include:
+      - GuestsOrExternalUsers  # All guest and external users
+    exclude:
+      - emergency_access_accounts  # Break-glass accounts (define GUIDs)
+      # - specific_group_guid      # Optional: exclude specific groups
+  
+  cloud_apps:
+    include:
+      - 00000003-0000-0ff1-ce00-000000000000  # SharePoint Online
+      - cc15fd57-2c6c-4117-a88c-83b1d56b4bbe  # Microsoft Teams
+      # Add additional app IDs as needed
+    exclude: []
+  
+  conditions:
+    client_app_types:
+      - browser
+      - mobileAppsAndDesktopClients
+    
+    locations:
+      include:
+        - AllLocations
+      exclude:
+        - AllTrusted  # Optional: exclude trusted locations
+    
+    device_platforms:
+      include:
+        - all
+      exclude: []
+    
+    sign_in_risk_levels: []  # Not used in this policy
+    user_risk_levels: []     # Not used in this policy
+
+# Access Controls
+grant_controls:
+  operator: OR
+  built_in_controls:
+    - mfa  # Require multi-factor authentication
+  custom_authentication_factors: []
+  terms_of_use: []
+
+# Session Controls
+session_controls:
+  sign_in_frequency:
+    value: 8
+    type: hours
+    is_enabled: true
+    authentication_type: primaryAndSecondaryAuthentication
+  
+  persistent_browser:
+    mode: never  # Never allow persistent browser sessions for external users
+    is_enabled: true
+  
+  cloud_app_security:
+    is_enabled: false  # Enable if using Defender for Cloud Apps
+    cloud_app_security_type: null
+
+# Metadata
+metadata:
+  created_by: "Identity Team"
+  created_date: "2025-01-01"
+  last_modified: "2025-01-01"
+  version: "1.0"
+  review_frequency: quarterly
+  
+  compliance_frameworks:
+    - SOX
+    - GDPR
+    - Zero Trust
+  
+  tags:
+    - external-users
+    - mfa
+    - collaboration
+    - security-baseline
+
+# Notes
+notes: |
+  - This policy applies to all external/guest users accessing Teams and SharePoint
+  - MFA is required regardless of location or device
+  - 8-hour sign-in frequency ensures regular re-authentication
+  - Exclude emergency access accounts to prevent lockout
+  - Review and update excluded groups quarterly

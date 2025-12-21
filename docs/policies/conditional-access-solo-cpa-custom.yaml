@@ -1,0 +1,556 @@
+# Conditional Access Policy: Solo CPA Firm Custom Edition
+# Optimized for 1-person CPA practice with client collaboration
+# Includes QuickBooks Online and Dynamics 365 Business Central integrations
+
+name: CA-Solo-CPA-Client-Collaboration
+display_name: "Solo CPA Firm - Client Collaboration & Accounting Software"
+description: |
+  Custom Conditional Access policy for solo CPA practitioner:
+  - YOU: Full access from your managed devices
+  - CLIENTS: Limited B2B access to their engagement folders only
+  - ACCOUNTING SOFTWARE: API access for QuickBooks/D365 BC
+  - TESTING: Flexible policies for playground experimentation
+
+state: enabledForReportingButNotEnforced  # Start in report-only mode for testing
+
+# ============================================================================
+# POLICY ASSIGNMENTS
+# ============================================================================
+
+assignments:
+  users:
+    include:
+      # Scenario 1: You (the CPA)
+      - your_cpa_account_upn  # Replace: e.g., "hassan@yourtenant.onmicrosoft.com"
+      
+      # Scenario 2: External clients (B2B guests)
+      - GuestsOrExternalUsers
+      
+    exclude:
+      # Emergency access (break-glass account)
+      - emergency_access_account_guid  # Replace with your break-glass account GUID
+      
+      # Service accounts for API integrations
+      - quickbooks_api_service_principal_guid  # Replace if using service principal
+      - dynamics365_api_service_principal_guid  # Replace if using service principal
+  
+  cloud_apps:
+    include:
+      # Core M365 apps
+      - 00000003-0000-0ff1-ce00-000000000000  # SharePoint Online (client files)
+      - cc15fd57-2c6c-4117-a88c-83b1d56b4bbe  # Microsoft Teams (client meetings)
+      - 00000002-0000-0ff1-ce00-000000000000  # Exchange Online (client emails)
+      
+      # Office apps
+      - 67e3df25-268a-4324-a550-0de1c7f97287  # Office 365
+      - c5393580-f805-4401-95e8-94b7a6ef2fc2  # Office 365 Management APIs
+      
+      # Power Platform (for QuickBooks/D365 integrations)
+      - 475226c6-020e-4fb2-8a90-7a972cbfc1d4  # Power Apps
+      - 7df0a125-d3be-4c96-aa54-591f83ff541c  # Power Automate
+      
+      # Optional: Azure portal (if managing resources)
+      # - c44b4083-3bb0-49c1-b47d-974e53cbdf3c  # Azure Portal
+    
+    exclude:
+      # Exclude non-sensitive apps from strict controls
+      # - Office 365 Home (personal, not work)
+
+# ============================================================================
+# CONDITIONS
+# ============================================================================
+
+conditions:
+  # Client app types
+  client_app_types:
+    - browser
+    - mobileAppsAndDesktopClients
+    # Exclude legacy auth (block old protocols)
+    - exchangeActiveSync  # Block unless needed
+    - other  # Block unless needed
+  
+  # Locations
+  locations:
+    include:
+      - AllLocations
+    
+    exclude:
+      # Optional: Add your office/home IP as trusted location
+      - named_location_your_office  # Replace with named location GUID
+      # Example: If you work from home, add your home IP range
+  
+  # Device platforms
+  device_platforms:
+    include:
+      - all
+    
+    # Optional: Exclude specific platforms if needed
+    exclude: []
+      # - linux  # Uncomment if you don't use Linux
+  
+  # ========================================================================
+  # SOLO CPA SCENARIO: Risk-based conditions
+  # ========================================================================
+  
+  # E5 FEATURE: Sign-in risk levels
+  sign_in_risk_levels:
+    # For YOU (CPA): Allow low-risk, prompt on medium, block high
+    # For CLIENTS: Block medium and high risk
+    - high
+    - medium
+    # Note: Low-risk sign-ins proceed with standard MFA
+  
+  # E5 FEATURE: User risk levels
+  user_risk_levels:
+    # Block high-risk users (compromised accounts)
+    - high
+  
+  # E5 FEATURE: Device state
+  device_state:
+    include_devices:
+      - all
+    
+    exclude_devices:
+      # Your compliant devices (Intune-managed laptop, phone)
+      - compliant
+      - domainJoined  # Hybrid Azure AD joined (if applicable)
+
+# ============================================================================
+# ACCESS CONTROLS (Differentiated by User Type)
+# ============================================================================
+
+grant_controls:
+  # SOLO CPA NOTE: This policy applies to ALL users
+  # To differentiate between YOU and CLIENTS, use separate policies or conditions
+  
+  operator: OR  # Require ONE of the following
+  
+  built_in_controls:
+    # 1. MFA (always required)
+    - mfa
+    
+    # 2. Compliant device (for YOU and high-security clients)
+    # - compliantDevice  # Uncomment to require Intune compliance
+    
+    # 3. Hybrid Azure AD joined (if you have on-prem AD)
+    # - domainJoinedDevice  # Uncomment if applicable
+  
+  # E5 FEATURE: Terms of Use
+  terms_of_use:
+    - external_collaboration_terms_guid  # Replace with your ToU GUID
+    # Create in: Entra admin center → Identity Governance → Terms of use
+  
+  # E5 FEATURE: Authentication strength
+  # authentication_strength:
+  #   strength_id: "00000000-0000-0000-0000-000000000002"  # Phishing-resistant MFA
+  # Note: Only enable if you have FIDO2 keys or Windows Hello
+
+# ============================================================================
+# SESSION CONTROLS (Solo CPA Optimized)
+# ============================================================================
+
+session_controls:
+  # Sign-in frequency
+  sign_in_frequency:
+    value: 8  # 8 hours (work day)
+    type: hours
+    is_enabled: true
+    authentication_type: primaryAndSecondaryAuthentication
+    # Note: Longer than enterprise (4 hours) for solo practitioner flexibility
+  
+  # Persistent browser
+  persistent_browser:
+    mode: never  # Always require re-auth on browser close
+    is_enabled: true
+  
+  # E5 FEATURE: Microsoft Defender for Cloud Apps
+  cloud_app_security:
+    is_enabled: true
+    cloud_app_security_type: monitorOnly  # Change to blockDownloads for stricter control
+    # Note: monitorOnly allows downloads but logs them (good for testing)
+  
+  # E5 FEATURE: Continuous Access Evaluation
+  continuous_access_evaluation:
+    mode: strictEnforcement  # Instant revocation (within 15 seconds)
+  
+  # E5 FEATURE: Application enforced restrictions
+  application_enforced_restrictions:
+    is_enabled: false  # Disable for solo CPA (flexibility needed)
+    # Note: This restricts SharePoint/Exchange to read-only in some scenarios
+  
+  # Disable resilience defaults (optional)
+  disable_resilience_defaults: false
+    # Keep resilience for user experience
+
+# ============================================================================
+# SOLO CPA SPECIFIC SETTINGS
+# ============================================================================
+
+solo_cpa_customizations:
+  # Scenario 1: YOU working on your laptop
+  your_devices:
+    primary_laptop:
+      name: "Your work laptop"
+      os: Windows 11
+      intune: Managed (compliant)
+      policy_behavior:
+        - MFA required (once per 8 hours)
+        - Full access to all apps
+        - Download/upload allowed
+        - No session restrictions
+    
+    your_phone:
+      name: "Your iPhone/Android"
+      intune: APP (App Protection Policies)
+      policy_behavior:
+        - MFA required
+        - Email/Teams only (view)
+        - No file downloads
+        - Intune APP enforces copy/paste restrictions
+  
+  # Scenario 2: CLIENT B2B guests
+  client_devices:
+    client_laptop:
+      name: "Client CFO's laptop"
+      intune: Not managed (their device)
+      policy_behavior:
+        - MFA required (every sign-in)
+        - Access ONLY to their engagement folder
+        - 4-hour session timeout (stricter than you)
+        - Download limit: 10 files/session (DLP)
+    
+    client_phone:
+      name: "Client's phone"
+      policy_behavior:
+        - MFA required
+        - View-only access (no downloads)
+        - Email notifications only
+  
+  # Scenario 3: API integrations (QuickBooks, D365 BC)
+  api_access:
+    quickbooks_oauth:
+      authentication: OAuth 2.0 (no MFA for API calls)
+      service_principal: Excluded from this policy
+      notes: "API calls use OAuth tokens, not user credentials"
+    
+    dynamics365_api:
+      authentication: Service principal + client secret
+      service_principal: Excluded from this policy
+      notes: "D365 BC API uses app registration, not user account"
+
+# ============================================================================
+# TESTING PLAYGROUND SETTINGS
+# ============================================================================
+
+testing_recommendations:
+  phase_1_report_only:
+    duration: 1-2 weeks
+    state: enabledForReportingButNotEnforced
+    monitor:
+      - Sign-in logs (are policies triggered?)
+      - User experience (any blocks or prompts?)
+      - False positives (legitimate sign-ins blocked?)
+    
+    testing_scenarios:
+      - "Sign in from your laptop → Should work seamlessly"
+      - "Sign in from your phone → Should work (email/Teams only)"
+      - "Invite yourself as B2B guest (personal email) → Test client experience"
+      - "Sign in from friend's laptop → Should be blocked (non-compliant device)"
+  
+  phase_2_pilot:
+    duration: 1-2 weeks
+    state: enabled
+    scope: Your account only (not clients yet)
+    monitor:
+      - Daily sign-ins
+      - Any disruptions to workflow
+      - API integrations still working?
+  
+  phase_3_production:
+    duration: Ongoing
+    state: enabled
+    scope: You + all B2B guests
+    monitor:
+      - Weekly: Review blocked sign-ins
+      - Monthly: Review risk detections
+      - Quarterly: Access reviews
+
+# ============================================================================
+# QUICKBOOKS ONLINE INTEGRATION NOTES
+# ============================================================================
+
+quickbooks_integration:
+  authentication_flow:
+    - User authorizes QBO connection (OAuth 2.0)
+    - Your app receives access token + refresh token
+    - API calls use access token (no MFA prompt)
+    - Token refresh happens automatically
+  
+  ca_policy_impact:
+    - OAuth authorization page: MFA may be required (one-time)
+    - API calls: No MFA (service principal or stored tokens)
+    - Recommendation: Exclude QBO service principal from CA policy
+  
+  security_considerations:
+    - Store tokens in Azure Key Vault (encrypted)
+    - Rotate refresh tokens every 90 days
+    - Monitor API usage for anomalies
+    - Log all QBO API calls
+
+# ============================================================================
+# DYNAMICS 365 BUSINESS CENTRAL INTEGRATION NOTES
+# ============================================================================
+
+dynamics365_integration:
+  authentication_flow:
+    - Azure AD app registration (service principal)
+    - Client ID + client secret authentication
+    - No user MFA required (app-only access)
+  
+  ca_policy_impact:
+    - D365 BC API calls: Not affected by user CA policies
+    - Service principal: Excluded from this policy
+    - User accessing D365 BC web UI: Subject to CA policy
+  
+  security_considerations:
+    - Store client secret in Azure Key Vault
+    - Rotate secret every 6 months
+    - Use least privilege API permissions
+    - Monitor D365 BC audit logs
+
+# ============================================================================
+# CLIENT CONFIDENTIALITY CONTROLS (AICPA Section 1.700)
+# ============================================================================
+
+client_data_protection:
+  segregation:
+    method: SharePoint site permissions + CA policies
+    implementation:
+      - Client A engagement: Separate SharePoint site
+      - Client A B2B guest: Access ONLY to their site
+      - Client B engagement: Separate SharePoint site
+      - Client B B2B guest: Access ONLY to their site
+    
+    enforcement:
+      - SharePoint permissions (primary)
+      - CA policies (secondary - this policy)
+      - DLP policies (prevent cross-client sharing)
+    
+    testing:
+      - Invite Client A CFO → Verify access ONLY to Client A site
+      - Client A tries to access Client B site → BLOCKED
+      - You can access both (admin override)
+  
+  time_limited_access:
+    engagement_duration: Remove from B2B guest list after engagement
+    auto_deprovision: 30 days after removal from sync scope
+    audit_trail: M365 audit logs (7-year retention)
+
+# ============================================================================
+# METADATA
+# ============================================================================
+
+metadata:
+  created_by: "Solo CPA Practitioner"
+  created_date: "2025-01-18"
+  last_modified: "2025-01-18"
+  version: "1.0-SoloCPA"
+  review_frequency: quarterly
+  
+  e5_features_used:
+    - Identity Protection (risk-based access)
+    - Intune Device Compliance
+    - Defender for Cloud Apps (session monitoring)
+    - Continuous Access Evaluation
+    - Terms of Use
+  
+  compliance_frameworks:
+    - AICPA Section 1.700 (Client Confidentiality)
+    - SOX (if auditing public companies)
+    - State Board of Accountancy (data protection)
+    - IRS 7-year retention
+  
+  accounting_software:
+    - QuickBooks Online (OAuth 2.0)
+    - Dynamics 365 Business Central (Azure AD app)
+  
+  tags:
+    - solo-cpa
+    - client-collaboration
+    - quickbooks
+    - dynamics365
+    - testing-playground
+
+# ============================================================================
+# DEPLOYMENT CHECKLIST
+# ============================================================================
+
+deployment_checklist:
+  pre_deployment:
+    - [ ] E5 license assigned to your account
+    - [ ] Identity Protection enabled
+    - [ ] Intune device compliance policies created
+    - [ ] Defender for Cloud Apps connected
+    - [ ] Terms of Use created and published
+    - [ ] Named locations configured (your office/home IP)
+    - [ ] Emergency access account created and excluded
+    - [ ] QuickBooks/D365 service principals identified and excluded
+  
+  deployment:
+    - [ ] Create policy in Entra admin center
+    - [ ] Set to report-only mode (test for 1-2 weeks)
+    - [ ] Monitor sign-in logs daily
+    - [ ] Adjust settings based on testing
+    - [ ] Enable for your account only (pilot)
+    - [ ] Monitor for 1 week
+    - [ ] Enable for all users (production)
+  
+  post_deployment:
+    - [ ] Test: Sign in from your laptop (should work)
+    - [ ] Test: Sign in from your phone (email/Teams only)
+    - [ ] Test: Invite yourself as B2B guest (client scenario)
+    - [ ] Test: Sign in from untrusted device (should block)
+    - [ ] Test: QuickBooks OAuth flow (should work)
+    - [ ] Test: D365 BC API calls (should work)
+    - [ ] Review CA insights dashboard (weekly for first month)
+    - [ ] Document any adjustments made
+
+# ============================================================================
+# TROUBLESHOOTING
+# ============================================================================
+
+troubleshooting:
+  issue_1_youre_blocked:
+    symptom: "You can't sign in from your laptop"
+    causes:
+      - Device not compliant (Intune)
+      - Not enrolled in Intune
+      - Sign-in risk detected (Identity Protection)
+    resolution:
+      - Check Intune compliance status
+      - Enroll device if not enrolled
+      - Dismiss risk in Identity Protection (if false positive)
+      - Use emergency access account temporarily
+  
+  issue_2_client_blocked:
+    symptom: "Client can't access their engagement folder"
+    causes:
+      - MFA not set up in their tenant
+      - Device compliance required (but their device isn't managed)
+      - Terms of Use not accepted
+    resolution:
+      - Help client set up MFA in their tenant
+      - Adjust policy to not require device compliance for guests
+      - Ensure Terms of Use is accepted during first sign-in
+  
+  issue_3_qbo_fails:
+    symptom: "QuickBooks OAuth authorization fails"
+    causes:
+      - CA policy blocking OAuth authorization page
+      - MFA prompt confusing OAuth flow
+    resolution:
+      - Ensure QBO service principal excluded from policy
+      - Use personal browser (not in CA policy scope) for initial OAuth
+      - Check QBO developer dashboard for errors
+  
+  issue_4_d365_fails:
+    symptom: "D365 BC API calls failing"
+    causes:
+      - Service principal not excluded from CA policy
+      - Client secret expired
+      - API permissions not granted
+    resolution:
+      - Verify service principal excluded
+      - Rotate client secret in Azure AD
+      - Re-grant API permissions (admin consent)
+      - Check D365 BC API error messages
+
+# ============================================================================
+# ROLLBACK PLAN
+# ============================================================================
+
+rollback_plan:
+  scenario: "Policy is blocking legitimate access"
+  
+  immediate_action:
+    - Set policy state to: disabled
+    - Notify affected users (you + clients)
+    - Document issue in change log
+  
+  investigation:
+    - Review CA insights for blocked sign-ins
+    - Check Identity Protection risk detections
+    - Review Defender for Cloud Apps session logs
+    - Interview affected users
+  
+  remediation:
+    - Adjust policy settings (e.g., remove device compliance requirement)
+    - Add exclusions (e.g., specific users or apps)
+    - Change operator from AND to OR
+    - Increase session timeout (8 hours → 12 hours)
+  
+  re_deployment:
+    - Set policy to report-only mode
+    - Test adjusted policy for 1 week
+    - Monitor for same issue
+    - Enable if no issues
+
+# ============================================================================
+# MONITORING & ALERTING
+# ============================================================================
+
+monitoring:
+  daily:
+    - Review sign-in logs (any blocked sign-ins?)
+    - Check Identity Protection risk detections
+  
+  weekly:
+    - Review CA insights dashboard
+    - Check Defender for Cloud Apps anomaly alerts
+    - Review QuickBooks/D365 BC API logs
+  
+  monthly:
+    - Export CA policy JSON (version control)
+    - Review MFA enrollment status
+    - Check device compliance status
+    - Review access review results (if configured)
+  
+  quarterly:
+    - Full policy review (is it still appropriate?)
+    - Update Terms of Use (if needed)
+    - Rotate service principal secrets
+    - Audit client access (who still has B2B access?)
+
+# ============================================================================
+# NOTES
+# ============================================================================
+
+notes: |
+  Solo CPA Practitioner Considerations:
+  - You are the only admin (no segregation of duties)
+  - Clients are B2B guests (external users)
+  - QuickBooks/D365 use service principals (exclude from policy)
+  - Testing playground (start in report-only mode!)
+  
+  Recommended Adjustments for Your Scenario:
+  1. Longer session timeout (8 hours vs 4) for flexibility
+  2. monitorOnly for Defender Cloud Apps (not blockDownloads) during testing
+  3. Exclude API service principals (QuickBooks, D365)
+  4. Separate CA policies for you vs. clients (optional, more control)
+  
+  QuickBooks Online Integration:
+  - OAuth 2.0 flow may prompt for MFA once
+  - Store tokens in Azure Key Vault
+  - API calls won't trigger MFA
+  
+  Dynamics 365 Business Central Integration:
+  - Service principal authentication (no user MFA)
+  - Exclude service principal from this policy
+  - User accessing D365 BC web UI will be subject to this policy
+  
+  Testing Workflow:
+  1. Deploy in report-only mode (1-2 weeks)
+  2. Review sign-in logs daily
+  3. Enable for your account only (1 week)
+  4. Enable for all users (production)
+  5. Monitor and adjust as needed

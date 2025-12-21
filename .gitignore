@@ -1,0 +1,91 @@
+# Compliance-Governance-Test .gitignore
+# Keep this repository clean and focused
+
+# =============================================================================
+# IDE / Editor Files
+# =============================================================================
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+*.tmp
+*.temp
+*.log
+*.bak
+*.cache
+
+# =============================================================================
+# PowerShell Module Cache
+# =============================================================================
+*.psm1.cache
+*.psd1.cache
+
+# =============================================================================
+# Azure / Microsoft Credentials (NEVER COMMIT THESE)
+# =============================================================================
+*.publishsettings
+*.azureauth
+*.key
+*.pfx
+*.p12
+appsettings.local.json
+secrets.json
+local.settings.json
+
+# Tenant-specific configuration (replace placeholders before committing)
+# Uncomment if you create tenant-specific files:
+# *-tenant-specific.yaml
+# *-production.yaml
+
+# =============================================================================
+# Deployment Artifacts
+# =============================================================================
+deploy/output/
+deploy/logs/
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/
+
+# =============================================================================
+# Documentation Build Artifacts
+# =============================================================================
+docs/_build/
+docs/.doctrees/
+site/
+
+# =============================================================================
+# OS-Specific Files
+# =============================================================================
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+.directory
+.Trash-*
+
+# =============================================================================
+# Notes
+# =============================================================================
+# Keep YAML templates (they're meant to be customized)
+!*.yaml
+!*.yml
+
+# Keep markdown documentation
+!*.md
+
+# Keep PowerShell scripts
+!*.ps1
