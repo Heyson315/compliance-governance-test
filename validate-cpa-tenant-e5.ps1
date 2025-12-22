@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Azure Tenant E5 Validation Checklist for CPA Firm (Solo Practitioner)
@@ -12,6 +12,7 @@
     - Dynamics 365 Business Central compatibility
     - Other accounting software (Xero, Bill.com, etc.)
     - CPA firm specific compliance checks
+    - Subscription cost analysis and credit tracking
 
 .PARAMETER TenantId
     Your Azure tenant ID (optional, will auto-detect if not provided)
@@ -25,15 +26,18 @@
 .PARAMETER IncludeThirdPartyApps
     Check other accounting software integrations
 
+.PARAMETER IncludeCostAnalysis
+    Include detailed cost analysis and Azure credit check
+
 .EXAMPLE
     .\validate-cpa-tenant-e5.ps1
     
 .EXAMPLE
-    .\validate-cpa-tenant-e5.ps1 -IncludeQuickBooks -IncludeDynamics365 -Verbose
+    .\validate-cpa-tenant-e5.ps1 -IncludeQuickBooks -IncludeDynamics365 -IncludeCostAnalysis -Verbose
 
 .NOTES
     Author: Hassan Rahman (Heyson315)
-    Version: 1.0
+    Version: 1.1
     CPA Firm: Solo Practitioner Testing Playground
     License: MIT
 #>
@@ -51,6 +55,9 @@ param(
     
     [Parameter()]
     [switch]$IncludeThirdPartyApps,
+    
+    [Parameter()]
+    [switch]$IncludeCostAnalysis,
     
     [Parameter()]
     [switch]$DetailedReport
@@ -72,6 +79,8 @@ $script:Warnings = @()
 $script:Passed = 0
 $script:Failed = 0
 $script:WarningCount = 0
+$script:TotalMonthlyCost = 0
+$script:AzureCreditsAvailable = 0
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -193,6 +202,17 @@ function Test-PowerShellPrerequisites {
             }
         }
     }
+    
+    # Check for Az module (for Azure subscription checks)
+    if ($IncludeCostAnalysis) {
+        $azInstalled = Test-ModuleInstalled -ModuleName "Az.Accounts"
+        if ($azInstalled) {
+            Write-CheckResult "Az.Accounts Module" "Pass" "Installed (for Azure cost analysis)"
+        }
+        else {
+            Write-CheckResult "Az.Accounts Module" "Info" "Not installed (optional for Azure subscription checks)"
+        }
+    }
 }
 
 function Test-AzureAuthentication {
@@ -230,6 +250,258 @@ function Test-AzureAuthentication {
     }
     catch {
         Write-CheckResult "Microsoft Graph Connection" "Fail" "Failed to connect: $_" "Critical"
+    }
+}
+
+function Test-SubscriptionCostsAndCredits {
+    $script:CurrentCategory = "Subscription Costs & Credits"
+    Write-Header "2️⃣.5️⃣  Subscription Cost Analysis & Azure Credits"
+    
+    Write-Host "  💰 Analyzing your subscription costs and available credits..." -ForegroundColor Cyan
+    Write-Host ""
+    
+    try {
+        # Get all subscribed SKUs
+        $subscribedSkus = Get-MgSubscribedSku -ErrorAction Stop
+        
+        # Define SKU pricing and types
+        $skuInfo = @{
+            # Microsoft 365 E5 variants
+            "c7df2760-2c81-4ef7-b578-5b5392b571df" = @{Name = "Microsoft 365 E5"; Cost = 57.00; Type = "Paid" }
+            "06ebc4ee-1bb5-47dd-8120-11324bc54e06" = @{Name = "Microsoft 365 E5 (No Teams)"; Cost = 54.00; Type = "Paid" }
+            "f8a1db68-be16-40ed-86d5-cb42ce701560" = @{Name = "Microsoft 365 E5 Developer"; Cost = 0.00; Type = "Free (90-day renewable)" }
+            
+            # Other common SKUs
+            "18181a46-0d4e-45cd-891e-60aabd171b4e" = @{Name = "Office 365 E1"; Cost = 10.00; Type = "Paid" }
+            "6fd2c87f-b296-42f0-b197-1e91e994b900" = @{Name = "Office 365 E3"; Cost = 23.00; Type = "Paid" }
+            "c7df2760-2c81-4ef7-b578-5b5392b571df" = @{Name = "Microsoft 365 E3"; Cost = 36.00; Type = "Paid" }
+            "4b590615-0888-425a-a965-b3bf7789848d" = @{Name = "Microsoft 365 Business Premium"; Cost = 22.00; Type = "Paid" }
+            "cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46" = @{Name = "Microsoft 365 Business Basic"; Cost = 6.00; Type = "Paid" }
+            
+            # Dynamics 365
+            "8e229017-d77b-43d5-9305-903c637de832" = @{Name = "Dynamics 365 Business Central Essentials"; Cost = 70.00; Type = "Paid" }
+            "920656a2-7dd8-4c83-97b6-a356414dbd36" = @{Name = "Dynamics 365 Business Central Premium"; Cost = 100.00; Type = "Paid" }
+        }
+        
+        $totalMonthlyCost = 0
+        $freeSubscriptions = @()
+        $paidSubscriptions = @()
+        
+        Write-Host "  📊 Microsoft 365 / Dynamics 365 Subscriptions:" -ForegroundColor Yellow
+        Write-Host ""
+        
+        foreach ($sku in $subscribedSkus) {
+            $skuId = $sku.SkuId
+            $skuPartNumber = $sku.SkuPartNumber
+            $consumedUnits = $sku.ConsumedUnits
+            $enabledUnits = $sku.PrepaidUnits.Enabled;
+            
+            $info = $skuInfo[$skuId]
+            if ($info) {
+                $monthlyCost = $info.Cost * $consumedUnits
+                $totalMonthlyCost += $monthlyCost
+                
+                $color = if ($info.Type -like "*Free*") { "Green" } else { "Yellow" }
+                
+                Write-Host "  • $($info.Name)" -ForegroundColor $color
+                Write-Host "     Type: $($info.Type)" -ForegroundColor Gray
+                Write-Host "     Assigned: $consumedUnits / $enabledUnits licenses" -ForegroundColor Gray
+                Write-Host "     Cost per license: `$$($info.Cost)/month" -ForegroundColor Gray
+                Write-Host "     Monthly cost: `$$([math]::Round($monthlyCost, 2))" -ForegroundColor $(if ($monthlyCost -eq 0) { "Green" } else { "Cyan" })
+                Write-Host ""
+                
+                if ($info.Type -like "*Free*") {
+                    $freeSubscriptions += $info.Name
+                }
+                else {
+                    $paidSubscriptions += @{Name = $info.Name; Cost = $monthlyCost }
+                }
+            }
+            else {
+                # Unknown SKU
+                Write-Host "  • $skuPartNumber (SKU: $skuId)" -ForegroundColor Gray
+                Write-Host "     Assigned: $consumedUnits / $enabledUnits licenses" -ForegroundColor Gray
+                Write-Host "     Cost: Unknown (check Microsoft pricing)" -ForegroundColor Yellow
+                Write-Host ""
+            }
+        }
+        
+        # Calculate annual cost
+        $annualCost = $totalMonthlyCost * 12
+        $script:TotalMonthlyCost = $totalMonthlyCost
+        
+        Write-Host "  💵 Total Estimated Costs:" -ForegroundColor Cyan
+        Write-Host "     Monthly: `$$([math]::Round($totalMonthlyCost, 2))" -ForegroundColor $(if ($totalMonthlyCost -eq 0) { "Green" } else { "Yellow" })
+        Write-Host "     Annual: `$$([math]::Round($annualCost, 2))" -ForegroundColor $(if ($annualCost -eq 0) { "Green" } else { "Yellow" })
+        Write-Host ""
+        
+        # Check subscription type
+        if ($freeSubscriptions.Count -gt 0) {
+            Write-CheckResult "Free Subscriptions Detected" "Pass" "$($freeSubscriptions.Count) free subscription(s): $($freeSubscriptions -join ', ')"
+            
+            Write-Host "  ℹ️  Developer Program Renewal:" -ForegroundColor Cyan
+            Write-Host "     - E5 Developer subscriptions renew every 90 days" -ForegroundColor Gray
+            Write-Host "     - Check renewal status: https://developer.microsoft.com/microsoft-365/profile" -ForegroundColor Gray
+            Write-Host "     - Must show 'active usage' to auto-renew" -ForegroundColor Gray
+            Write-Host ""
+        }
+        
+        if ($paidSubscriptions.Count -gt 0) {
+            $highestCost = ($paidSubscriptions | Sort-Object -Property Cost -Descending | Select-Object -First 1)
+            Write-CheckResult "Paid Subscriptions Active" "Warning" "Monthly cost: `$$([math]::Round($totalMonthlyCost, 2)) - Consider cost optimization"
+            
+            Write-Host "  💡 Cost Optimization Tips:" -ForegroundColor Yellow
+            Write-Host "     1. Review unused licenses and remove assignments" -ForegroundColor Gray
+            Write-Host "     2. Consider E5 Developer (free) for testing/development" -ForegroundColor Gray
+            Write-Host "     3. Use E3 instead of E5 if advanced security features not needed" -ForegroundColor Gray
+            Write-Host "     4. Check for annual commitment discounts (save up to 17%)" -ForegroundColor Gray
+            Write-Host ""
+        }
+        else {
+            Write-CheckResult "Subscription Cost" "Pass" "No paid Microsoft 365 subscriptions - Using free tier"
+        }
+        
+        # Check Azure subscriptions and credits
+        Write-Host "  ☁️  Azure Subscription & Credits Check:" -ForegroundColor Cyan
+        Write-Host ""
+        
+        $azAccountsInstalled = Test-ModuleInstalled -ModuleName "Az.Accounts"
+        
+        if ($azAccountsInstalled) {
+            try {
+                # Check if connected to Azure
+                $azContext = Get-AzContext -ErrorAction SilentlyContinue
+                
+                if ($null -eq $azContext) {
+                    Write-Host "  🔐 Not connected to Azure. Attempting authentication..." -ForegroundColor Yellow
+                    Connect-AzAccount -TenantId $script:TenantId -ErrorAction Stop | Out-Null
+                    $azContext = Get-AzContext
+                }
+                
+                if ($azContext) {
+                    $azSubscriptions = Get-AzSubscription -TenantId $script:TenantId -ErrorAction Stop
+                    
+                    if ($azSubscriptions.Count -gt 0) {
+                        Write-Host "  📋 Azure Subscriptions Found: $($azSubscriptions.Count)" -ForegroundColor Green
+                        Write-Host ""
+                        
+                        foreach ($sub in $azSubscriptions) {
+                            Write-Host "  • $($sub.Name)" -ForegroundColor Yellow
+                            Write-Host "     Subscription ID: $($sub.Id)" -ForegroundColor Gray
+                            Write-Host "     State: $($sub.State)" -ForegroundColor $(if ($sub.State -eq "Enabled") { "Green" } else { "Red" })
+                            
+                            # Identify subscription type by name patterns
+                            $subType = "Unknown"
+                            $estimatedCredit = 0
+                            
+                            switch -Regex ($sub.Name) {
+                                "Visual Studio Enterprise|MSDN" { 
+                                    $subType = "Visual Studio Enterprise Subscription"
+                                    $estimatedCredit = 150
+                                }
+                                "Visual Studio Professional" { 
+                                    $subType = "Visual Studio Professional Subscription"
+                                    $estimatedCredit = 50
+                                }
+                                "Free Trial|Azure Free" { 
+                                    $subType = "Azure Free Trial"
+                                    $estimatedCredit = 200  # One-time $200 credit
+                                }
+                                "Pay-As-You-Go|PAYG" { 
+                                    $subType = "Pay-As-You-Go (No monthly credits)"
+                                    $estimatedCredit = 0
+                                }
+                                "Sponsorship|Startup" { 
+                                    $subType = "Microsoft Sponsorship / Startup Program"
+                                    $estimatedCredit = 0  # Variable
+                                }
+                                "Azure for Students" { 
+                                    $subType = "Azure for Students"
+                                    $estimatedCredit = 100
+                                }
+                            }
+                            
+                            Write-Host "     Type: $subType" -ForegroundColor Gray
+                            if ($estimatedCredit -gt 0) {
+                                Write-Host "     Estimated Monthly Credit: `$$estimatedCredit" -ForegroundColor Green
+                                $script:AzureCreditsAvailable += $estimatedCredit
+                            }
+                            Write-Host ""
+                        }
+                        
+                        if ($script:AzureCreditsAvailable -gt 0) {
+                            Write-CheckResult "Azure Credits Available" "Pass" "Estimated `$$script:AzureCreditsAvailable/month in Azure credits"
+                        }
+                        else {
+                            Write-CheckResult "Azure Credits" "Info" "No automatic monthly credits detected (Pay-As-You-Go or unknown type)"
+                        }
+                    }
+                    else {
+                        Write-CheckResult "Azure Subscriptions" "Info" "No Azure subscriptions found in this tenant"
+                    }
+                }
+            }
+            catch {
+                Write-CheckResult "Azure Subscription Check" "Warning" "Unable to check Azure subscriptions: $_"
+                Write-Host "  ℹ️  To check Azure credits manually:" -ForegroundColor Cyan
+                Write-Host "     1. Go to: https://portal.azure.com" -ForegroundColor Gray
+                Write-Host "     2. Navigate to: Cost Management + Billing → Credits" -ForegroundColor Gray
+                Write-Host ""
+            }
+        }
+        else {
+            Write-Host "  ℹ️  Az.Accounts module not installed. To check Azure credits:" -ForegroundColor Cyan
+            Write-Host "     1. Install: Install-Module -Name Az.Accounts -Scope CurrentUser" -ForegroundColor Gray
+            Write-Host "     2. Re-run this script with -IncludeCostAnalysis" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "  Or check manually at: https://portal.azure.com → Cost Management + Billing" -ForegroundColor Gray
+            Write-Host ""
+            
+            Write-CheckResult "Azure Credits Check" "Info" "Az.Accounts module required for automatic detection"
+        }
+        
+        # Summary and recommendations
+        Write-Host "  📌 Cost Summary & Recommendations:" -ForegroundColor Cyan
+        Write-Host ""
+        
+        if ($totalMonthlyCost -eq 0 -and $freeSubscriptions.Count -gt 0) {
+            Write-Host "  ✅ You're on FREE subscriptions! ($($freeSubscriptions -join ', '))" -ForegroundColor Green
+            Write-Host "     - Perfect for testing and development" -ForegroundColor Gray
+            Write-Host "     - Monitor renewal status every 90 days" -ForegroundColor Gray
+            Write-Host "     - Ensure active usage to maintain auto-renewal" -ForegroundColor Gray
+        }
+        elseif ($totalMonthlyCost -gt 0 -and $totalMonthlyCost -lt 100) {
+            Write-Host "  ⚠️  Low monthly cost (`$$([math]::Round($totalMonthlyCost, 2)))" -ForegroundColor Yellow
+            Write-Host "     - Consider migrating to E5 Developer (free) if for testing" -ForegroundColor Gray
+            Write-Host "     - Or downgrade to E3 if E5 features not fully utilized" -ForegroundColor Gray
+        }
+        elseif ($totalMonthlyCost -ge 100) {
+            Write-Host "  🚨 HIGH monthly cost (`$$([math]::Round($totalMonthlyCost, 2)))" -ForegroundColor Red
+            Write-Host "     - URGENT: Review license assignments" -ForegroundColor Red
+            Write-Host "     - Remove unused licenses immediately" -ForegroundColor Red
+            Write-Host "     - Consider E5 Developer for non-production use" -ForegroundColor Red
+            Write-Host "     - Annual commitment can save 17% (~`$$([math]::Round($annualCost * 0.17, 2))/year)" -ForegroundColor Yellow
+        }
+        
+        Write-Host ""
+        
+        # Azure credit recommendations
+        if ($script:AzureCreditsAvailable -gt 0) {
+            Write-Host "  💳 Azure Credits: You have ~`$$script:AzureCreditsAvailable/month" -ForegroundColor Green
+            Write-Host "     - Use these for Azure services (VMs, Storage, etc.)" -ForegroundColor Gray
+            Write-Host "     - Does NOT apply to Microsoft 365 licenses" -ForegroundColor Gray
+        }
+        else {
+            Write-Host "  💳 No monthly Azure credits detected" -ForegroundColor Yellow
+            Write-Host "     - Consider Visual Studio subscription (includes `$50-150/month credit)" -ForegroundColor Gray
+            Write-Host "     - Or Azure for Students (`$100 credit for eligible students)" -ForegroundColor Gray
+        }
+        
+        Write-Host ""
+        
+    }
+    catch {
+        Write-CheckResult "Cost Analysis" "Warning" "Unable to analyze costs: $_"
     }
 }
 
@@ -705,6 +977,12 @@ try {
     # Run validation checks
     Test-PowerShellPrerequisites
     Test-AzureAuthentication
+    
+    # Cost analysis (if requested or by default)
+    if ($IncludeCostAnalysis -or $PSBoundParameters.Count -eq 0) {
+        Test-SubscriptionCostsAndCredits
+    }
+    
     Test-E5Licensing
     Test-IdentityProtection
     Test-ConditionalAccess
@@ -722,6 +1000,11 @@ try {
     
     if ($IncludeThirdPartyApps -or $PSBoundParameters.Count -eq 0) {
         Test-ThirdPartyApps
+    }
+    
+    # Cost analysis if requested
+    if ($IncludeCostAnalysis) {
+        Test-SubscriptionCostsAndCredits
     }
     
     Test-CPAFirmCompliance
