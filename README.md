@@ -1,6 +1,6 @@
-﻿# **Lean Tech Roadmap for AI & Compliance Projects**
+# **Lean Tech Roadmap for AI & Compliance Projects**
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/Heyson315/compliance-governance-test/ci.yml?branch=master&label=Build&logo=github)
+![Build Status](https://img.shields.io/github/actions/workflow/status/Heyson315/compliance-governance-test/ci.yml?branch=main&label=Build&logo=github)
 ![Security Scan](https://img.shields.io/badge/Security-Passed-brightgreen?logo=github-actions)
 ![License](https://img.shields.io/badge/License-MIT-blue?logo=opensourceinitiative)
 ![Last Commit](https://img.shields.io/github/last-commit/Heyson315/compliance-governance-test?logo=github)
@@ -224,3 +224,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
   <img src="https://img.shields.io/badge/Made%20with-❤️-red" alt="Made with love">
   <img src="https://img.shields.io/badge/Powered%20by-GitHub%20Copilot-blue?logo=github" alt="Powered by GitHub Copilot">
 </p>
+
