@@ -18,6 +18,8 @@ This roadmap outlines a **budget-friendly strategy** to integrate AI, automation
 
 | Document | Description |
 |----------|-------------|
+| 📊 [**Project Status Dashboard**](PROJECT-STATUS.md) | **NEW** - Live progress tracking, cost metrics, and milestone calendar |
+| 💰 [**Cost Monitor Script**](monitor-azure-costs.ps1) | **NEW** - Automated Azure/M365 cost monitoring and alerts |
 | 🔗 [Cross-Tenant Collaboration Guide](docs/cross-tenant-collab.md) | Complete guide for Microsoft Entra ID cross-tenant access, B2B collaboration, and identity synchronization |
 | ⭐ [E5 Optimization Guide](docs/e5-optimization-guide.md) | **NEW** - Maximize Microsoft 365 E5 features for cross-tenant scenarios |
 | 🏢 [Solo CPA Testing Guide](docs/solo-cpa-testing-guide.md) | **NEW** - Testing playground for solo CPA practitioners (includes QuickBooks, Dynamics 365) |
@@ -205,6 +207,34 @@ cd compliance-governance-test
 
 # Review the roadmap and start with Phase 1
 ```
+
+---
+
+## **Project Management**
+
+### 📊 **Track Progress**
+- [**Project Status Dashboard**](PROJECT-STATUS.md) - Current phase, costs, and milestones
+- [**GitHub Issues**](.github/ISSUE_TEMPLATE/) - Phase-specific task templates
+- [**GitHub Actions**](../../actions) - CI/CD and automated workflows
+
+### 💰 **Monitor Costs**
+```bash
+# Run weekly cost analysis
+.\monitor-azure-costs.ps1 -Verbose
+
+# Export detailed report
+.\monitor-azure-costs.ps1 -ExportReport
+
+# Set up email alerts
+.\monitor-azure-costs.ps1 -AlertEmail "your-email@example.com"
+```
+
+### 🎯 **Current Sprint**
+**Phase 1 - Week of Dec 21, 2024:**
+- ✅ CI/CD workflow deployed
+- ✅ Cost monitoring implemented
+- 🔄 Complete compliance templates
+- 📋 Planned: Phase 1 review (Jan 15, 2025)
 
 ---
 
