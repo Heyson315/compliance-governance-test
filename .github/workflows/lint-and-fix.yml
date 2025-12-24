@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  workflows: write  # Required to modify workflow files
 
 jobs:
   lint-and-fix:
